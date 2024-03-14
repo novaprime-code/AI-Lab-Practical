@@ -1,52 +1,76 @@
-import random  # Import random module for generating random statuses
+import random
 
 
-# Define a function to represent the environment and its current state
-def environment(percept):
-    # Print the current percept or sensory input
-    print("Percept received:", percept)
+class Environment:
+    def __init__(self):
+        # Randomly initialize the status of rooms A and B
+        self.room_a_status = random.choice(["Dirty", "Clean"])
+        self.room_b_status = random.choice(["Dirty", "Clean"])
+        # Randomly choose the agent's starting location
+        self.agent_location = random.choice(["A", "B"])
 
-    # Check the percept to decide the action
-    if percept == "Dirty":
-        return "Clean"
-    elif percept == "Clean":
-        return "Move"
-    else:
-        return "No Operation"
+    def percept(self):
+        # Return the percept of the agent's current location and content
+        return [
+            self.agent_location,
+            self.room_a_status if self.agent_location == "A" else self.room_b_status,
+        ]
+
+    def clean_room(self):
+        # Clean the current room
+        if self.agent_location == "A":
+            self.room_a_status = "Clean"
+        else:
+            self.room_b_status = "Clean"
+
+    def move_right(self):
+        # Move the agent to the right room (from A to B)
+        print("Moving from room A to room B.")
+        self.agent_location = "B"
+
+    def move_left(self):
+        # Move the agent to the left room (from B to A)
+        print("Moving from room B to room A.")
+        self.agent_location = "A"
 
 
-# Define a function to represent the agent's behavior
-def reflex_agent(location, status):
-    # Print the current location and status of the agent
-    print("Location:", location, ", Status:", status)
+class ReflexAgent:
+    def __init__(self, environment):
+        self.environment = environment
 
-    # Call the environment function with the current percept
-    action = environment(status)
+    def act(self):
+        # Check the percept and decide the action
+        percept = self.environment.percept()
+        location, status = percept
 
-    # Print the action chosen by the agent
-    print("Action:", action)
-    print()  # Add a newline for better readability
+        if status == "Dirty":
+            self.environment.clean_room()
+        elif location == "A":
+            self.environment.move_right()
+        else:
+            self.environment.move_left()
 
 
-# Main function to run the simulation
 def main():
-    # Define the initial state of the rooms
-    room_a_status = random.choice(["Dirty", "Clean"])
-    room_b_status = random.choice(["Dirty", "Clean"])
+    # Create the environment
+    env = Environment()
 
-    # Run the reflex agent for a few iterations
-    for i in range(3):
-        # Call the reflex agent function for room A
-        reflex_agent("Room A", room_a_status)
+    # Create the reflex agent
+    agent = ReflexAgent(env)
 
-        # Call the reflex agent function for room B
-        reflex_agent("Room B", room_b_status)
+    # Run the simulation until both rooms are clean
+    while env.room_a_status == "Dirty" or env.room_b_status == "Dirty":
+        print("Agent Location:", env.agent_location)
+        print("Room A Status:", env.room_a_status)
+        print("Room B Status:", env.room_b_status)
 
-        # Randomly update the status of rooms A and B for the next iteration
-        room_a_status = random.choice(["Dirty", "Clean"])
-        room_b_status = random.choice(["Dirty", "Clean"])
+        # Let the agent act based on the current environment
+        agent.act()
+
+        print()
+
+    print("Both rooms are clean.")
 
 
-# Run the main function to start the simulation
 if __name__ == "__main__":
     main()
