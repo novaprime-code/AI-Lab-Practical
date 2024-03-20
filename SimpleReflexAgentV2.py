@@ -1,78 +1,84 @@
-import random
+class VacuumEnvironment(XYEnvironment):
+    """The environment of [Ex. 2.12]. Agent perceives dirty or clean,
+    and bump (into obstacle) or not; 2D discrete world of unknown size;
+    performance measure is 100 for each dirt cleaned, and -1 for
+    each turn taken."""
 
-# Define the percepts and actions
-PERCEPTS = ["dirty", "clean"]
-ACTIONS = ["clean", "move_right", "move_left"]
-ROOMS = ["A", "B"]
+    def __init__(self, width=10, height=10):
+        super(VacuumEnvironment, self).__init__(width, height)
+        self.add_walls()
 
-# Define the reflex rules
-REFLEX_RULES = {
-    ("dirty", "A"): "clean",
-    ("clean", "A"): "move_right",
-    ("dirty", "B"): "clean",
-    ("clean", "B"): "move_left",
-}
+    def thing_classes(self):
+        return [
+            Wall,
+            Dirt,
+            ReflexVacuumAgent,
+            RandomVacuumAgent,
+            TableDrivenVacuumAgent,
+            ModelBasedVacuumAgent,
+        ]
 
+    def percept(self, agent):
+        """The percept is a tuple of ('Dirty' or 'Clean', 'Bump' or 'None').
+        Unlike the TrivialVacuumEnvironment, location is NOT perceived."""
+        status = if_(self.some_things_at(agent.location, Dirt), "Dirty", "Clean")
+        bump = if_(agent.bump, "Bump", "None")
+        return (status, bump)
 
-# Reflex Agent function
-def reflex_agent(percept, room):
-    """
-    Takes a percept and room as input and returns the corresponding action based on the REFLEX_RULES.
-    """
-    state = (percept, room)
-    action = REFLEX_RULES.get(state, "move_right")  # Default action is to move right
-    return action
-
-
-# Environment function
-def environment(action, room):
-    """
-    Simulates the environment's response to the agent's action.
-    Updates the room and returns a new percept based on the action.
-    """
-    if action == "move_right":
-        new_room = ROOMS[(ROOMS.index(room) + 1) % len(ROOMS)]
-    elif action == "move_left":
-        new_room = ROOMS[(ROOMS.index(room) - 1) % len(ROOMS)]
-    else:
-        new_room = room
-
-    if new_room == "A":
-        new_percept = "dirty"
-    else:
-        new_percept = random.choice(PERCEPTS)
-
-    return new_percept, new_room
+    def execute_action(self, agent, action):
+        if action == "Suck":
+            dirt_list = self.list_things_at(agent.location, Dirt)
+            if dirt_list != []:
+                dirt = dirt_list[0]
+                agent.performance += 100
+                self.delete_thing(dirt)
+        else:
+            super(VacuumEnvironment, self).execute_action(agent, action)
+        if action != "NoOp":
+            agent.performance -= 1
 
 
-# Main loop
-def main():
-    """
-    The main function that runs the agent-environment loop.
-    """
-    print("Welcome to the Vacuum Cleaner World with Two Rooms!")
-    print("The agent will perceive the environment and take actions accordingly.")
+class TrivialVacuumEnvironment(Environment):
+    """This environment has two locations, A and B. Each can be Dirty
+    or Clean.  The agent perceives its location and the location's
+    status. This serves as an example of how to implement a simple
+    Environment."""
 
-    # Randomly select an initial room and percept
-    room = random.choice(ROOMS)
-    percept = random.choice(PERCEPTS)
-    print(f"Initial room: {room}, Initial percept: {percept}")
+    def __init__(self):
+        super(TrivialVacuumEnvironment, self).__init__()
+        self.status = {
+            loc_A: random.choice(["Clean", "Dirty"]),
+            loc_B: random.choice(["Clean", "Dirty"]),
+        }
 
-    while True:
-        # Call the reflex agent function to get the action based on the current percept and room
-        action = reflex_agent(percept, room)
-        print(f"Action: {action}")
+    def thing_classes(self):
+        return [
+            Wall,
+            Dirt,
+            ReflexVacuumAgent,
+            RandomVacuumAgent,
+            TableDrivenVacuumAgent,
+            ModelBasedVacuumAgent,
+        ]
 
-        # Simulate the environment's response to the action
-        percept, room = environment(action, room)
-        print(f"New room: {room}, New percept: {percept}")
+    def percept(self, agent):
+        """Returns the agent's location, and the location status (Dirty/Clean)."""
+        return (agent.location, self.status[agent.location])
 
-        # Ask the user if they want to continue
-        if input("Continue? (y/n) ") != "y":
-            break
+    def execute_action(self, agent, action):
+        """Change agent's location and/or location's status; track performance.
+        Score 10 for each dirt cleaned; -1 for each move."""
+        if action == "Right":
+            agent.location = loc_B
+            agent.performance -= 1
+        elif action == "Left":
+            agent.location = loc_A
+            agent.performance -= 1
+        elif action == "Suck":
+            if self.status[agent.location] == "Dirty":
+                agent.performance += 10
+            self.status[agent.location] = "Clean"
 
-    print("Goodbye!")
-
-
-if __name__ == "__main__":
-    main()
+    def default_location(self, thing):
+        """Agents start in either location at random."""
+        return random.choice([loc_A, loc_B])
